@@ -1,0 +1,384 @@
+library("dplyr")
+library("lattice")
+library("survival")
+library("Formula")
+library("ggplot2")
+library("PerformanceAnalytics")
+library("rcompanion")
+library("compareGroups")
+library("sjmisc")
+library("xtable")
+library("corrplot")
+library("psych")
+library("apaTables")
+library("multcomp")
+
+setwd("/Users/parsanajmaie/Desktop/Data for Parsa")
+
+harveymomcleaned <- read.csv("harveymomcleaned2.1.23.csv")
+
+#first, load the column names: 
+names(harveymomcleaned)
+
+#first let's create a composite variable for the IDAS: 
+IDAS_C <- harveymomcleaned[17:18]
+IDAS_C
+
+#next we have to define all of our variables: 
+c_age <- harveymomcleaned[3]
+c_age_neg <- harveymomcleaned[4]
+bo_gest_age <- harveymomcleaned[5]
+bo_gest_age_win <- harveymomcleaned[6]
+bo_weight_lbs <- harveymomcleaned[7]
+c_sex <- harveymomcleaned[8]
+c_race <- harveymomcleaned[9]
+c_ethnicity <- harveymomcleaned[10]
+MomAgeAtRec <- harveymomcleaned[11]
+demo2_income.x <- harveymomcleaned[12]
+demo2_education.x <- harveymomcleaned[13]
+demo2_employed.x <- harveymomcleaned[14]
+demo2_relation.x <- harveymomcleaned[15]
+Trimester_280 <- harveymomcleaned[16]
+PregnantAtRecruitment <- harveymomcleaned[17]
+PregnantDuringHarvey_280 <- harveymomcleaned[18]
+PDI_TOT <- harveymomcleaned[19]
+IESR_T_R_sqrt <- harveymomcleaned[20]
+IDASGD_R_sqrt <- harveymomcleaned[21]
+IDASPa_R_log <- harveymomcleaned[22]
+HOSS200_log <- harveymomcleaned[23]
+threat50_wsqrt <- harveymomcleaned[24]
+loss50_sqrt <- harveymomcleaned[25]
+scope50_sqrt <- harveymomcleaned[26]
+Change50_sqrt<- harveymomcleaned[27]
+CBEMR_wsqrt <- harveymomcleaned[28]
+CBAND_sqrt <- harveymomcleaned[29]
+CBSOM_sqrt <- harveymomcleaned[30]
+CBSOM_wsqrt <- harveymomcleaned[31]
+CBWIT_wsqrt <- harveymomcleaned[32]
+CBLSP_sqrt <- harveymomcleaned[33]
+CBATT_sqrt <- harveymomcleaned[34]
+CBAGG_sqrt <- harveymomcleaned[35]
+CBOTH_log <- harveymomcleaned[36]
+CBINT_sqrt <- harveymomcleaned[37]
+CBEXT_sqrt <- harveymomcleaned[38]
+CBTOT_log <- harveymomcleaned[39]
+CBAFFt <- harveymomcleaned[40]
+CBANXt <- harveymomcleaned[41]
+CBPDDt <- harveymomcleaned[42]
+CBADDt <- harveymomcleaned[43]
+CBODDt <- harveymomcleaned[44]
+CBAGGt <- harveymomcleaned[45]
+CBINTt <- harveymomcleaned[46]
+CBEXTt <- harveymomcleaned[47]
+CBTOTt <- harveymomcleaned[48]
+
+#must do this for all variables you're trying to correlate. 
+
+#next we have to bind the variables that we want to correlate
+#you have to write out a correlation for each correlation of interest that we have. 
+
+#let's look at PDI total score and child's externalizing score: 
+
+PDI_TOT_CBEXT_sqrt <- cbind(PDI_TOT, CBEXT_sqrt)
+head(PDI_TOT_CBEXT_sqrt)
+#once you've bound them, you can create your correlation matrix: 
+chart.Correlation(PDI_TOT_CBEXT_sqrt, histogram=TRUE, method= "pearson") #significant*
+
+
+#let's look at PDI total score and child's internalizing score: 
+PDI_TOT_CBINT_sqrt <- cbind(PDI_TOT, CBINT_sqrt)
+head(PDI_TOT_CBINT_sqrt)
+chart.Correlation(PDI_TOT_CBINT_sqrt, histogram=TRUE, method= "pearson") #significant**
+
+#let's look at PDI total score and child's total problem score: 
+PDI_TOT_CBTOT_log <- cbind(PDI_TOT, CBTOT_log)
+head(PDI_TOT_CBTOT_log)
+chart.Correlation(PDI_TOT_CBTOT_log, histogram=TRUE, method= "pearson") #significant* 
+
+#let's look at maternal total objective stress and child's externalizing score: 
+HOSS200_log_CBEXT_sqrt <- cbind(HOSS200_log, CBEXT_sqrt)
+head(HOSS200_log_CBEXT_sqrt)
+chart.Correlation(HOSS200_log_CBEXT_sqrt, histogram=TRUE, method= "pearson") #interesting, also not significant
+
+#let's look at maternal total objective stress and child's internalizing score: 
+HOSS200_log_CBINT_sqrt <- cbind(HOSS200_log, CBINT_sqrt)
+head(HOSS200_log_CBINT_sqrt)
+chart.Correlation(HOSS200_log_CBINT_sqrt, histogram=TRUE, method= "pearson") #interesting, not significant
+
+#let's look at maternal total objective stress and child's total problem score: 
+HOSS200_log_CBTOT_log <- cbind(HOSS200_log, CBTOT_log)
+head(HOSS200_log_CBTOT_log)
+chart.Correlation(HOSS200_log_CBTOT_log, histogram=TRUE, method= "pearson") #interesting, not significant
+
+#let's look at maternal total flood stress and child's externalizing problems: 
+IESR_T_R_sqrt_CBEXT_sqrt <- cbind(IESR_T_R_sqrt, CBEXT_sqrt)
+head(IESR_T_R_sqrt_CBEXT_sqrt)
+chart.Correlation(IESR_T_R_sqrt_CBEXT_sqrt, histogram=TRUE, method= "pearson") #not significant 
+
+#let's look at maternal total flood stress and child's internalizing problems:
+IESR_T_R_sqrt_CBINT_sqrt <- cbind(IESR_T_R_sqrt, CBINT_sqrt)
+head(IESR_T_R_sqrt_CBINT_sqrt)
+chart.Correlation(IESR_T_R_sqrt_CBINT_sqrt, histogram=TRUE, method= "pearson") #not significant 
+
+#let's look at maternal total flood stress and child's total problems: 
+IESR_T_R_sqrt_CTOT_log <- cbind(IESR_T_R_sqrt, CBTOT_log)
+head(IESR_T_R_sqrt_CBTOT_log)
+chart.Correlation(IESR_T_R_sqrt_CBTOT_log, histogram=TRUE, method= "pearson") #not significant
+
+#let's make a dataframe with only continuous variables that we would correlate: 
+harveymomcleaned_cont <- harveymomcleaned[, c("PDI_TOT", "IESR_T_R_sqrt", "IDASGD_R_sqrt", "IDASPa_R_log", "HOSS200_log", 
+                                        "threat50_wsqrt", "loss50_sqrt", "CBEMR_wsqrt", 
+                                        "CBWIT_wsqrt", "CBSLP_sqrt", "CBATT_sqrt", "CBAGG_sqrt", 
+                                        "CBOTH_log", "CBINT_sqrt", "CBEXT_sqrt", "CBTOT_log")] 
+
+#let's make a dataframe with less continuous variables that we would correlate for the poster: 
+harveymomcleaned_cont_post <- harveymomcleaned[, c("PDI_TOT", "IESR_T_R_sqrt", "IDASGD_R_sqrt", "IDASPa_R_log", "HOSS200_log", 
+                                                    "CBINT_sqrt", "CBEXT_sqrt", "CBTOT_log")] 
+
+#I can also make an APA correlation table:
+
+apa.cor.table(
+  harveymomcleaned_cont,
+  filename = "harveymomcleaned_cont.doc",
+  table.number = NA,
+  show.conf.interval = TRUE,
+  show.sig.stars = TRUE,
+  landscape = TRUE
+)
+view(behavioral_cor_tab)
+
+#Way to look at correlation matrix with variables of interest: 
+library(PerformanceAnalytics)
+chart.Correlation(harveymomcleaned_cont, histogram = TRUE, method = "pearson")
+
+#corr matrix with poster variables: 
+harveymom_poster_corr_mat <- chart.Correlation(harveymomcleaned_cont_post, histogram = TRUE, method = "pearson")
+harveymom_poster_corr_mat #null.
+
+#to look at all of the correlations, you can create a correlation matrix: 
+
+hmc_corrcomplete <- harveymomcleaned %>%
+  select(bo_gest_age_win, bo_weight_lbs, PDI_TOT, IESR_T_R_sqrt, IDASGD_R_sqrt, IDASPa_R_log, HOSS200_log, 
+         threat50_wsqrt, loss50_sqrt, CBEMR_wsqrt, 
+         CBWIT_wsqrt, CBSLP_sqrt, CBATT_sqrt, CBAGG_sqrt, 
+CBOTH_log, CBINT_sqrt, CBEXT_sqrt, CBTOT_log)
+hmc_corrcomplete
+corstars <-function(x, method= "pearson", removeTriangle=c("upper", "lower"),
+                    result=c("none", "html", "latex")){
+  
+  #Compute correlation matrix
+  require(Hmisc)
+  x <- as.matrix(x)
+  correlation_matrix<-rcorr(x, type=method[1])
+  R <- correlation_matrix$r # Matrix of correlation coeficients
+  p <- correlation_matrix$P # Matrix of p-value
+  ## Define notions for significance levels; spacing is important.
+  mystars <- ifelse(p < .0001, "****", ifelse(p < .001, "*** ", ifelse(p < .01, "**  ", ifelse(p < .05, "*   ", "    "))))
+  ## trunctuate the correlation matrix to two decimal
+  R <- format(round(cbind(rep(-1.11, ncol(x)), R), 2))[,-1]
+  ## build a new matrix that includes the correlations with their appropriate stars
+  Rnew <- matrix(paste(R, mystars, sep=""), ncol=ncol(x))
+  diag(Rnew) <- paste(diag(R), " ", sep="")
+  rownames(Rnew) <- colnames(x)
+  colnames(Rnew) <- paste(colnames(x), "", sep="")
+  ## remove upper triangle of correlation matrix
+  if(removeTriangle[1]=="upper"){
+    Rnew <- as.matrix(Rnew)
+    Rnew[upper.tri(Rnew, diag = TRUE)] <- ""
+    Rnew <- as.data.frame(Rnew)
+  }
+  ## remove lower triangle of correlation matrix
+  else if(removeTriangle[1]=="lower"){
+    Rnew <- as.matrix(Rnew)
+    Rnew[lower.tri(Rnew, diag = TRUE)] <- ""
+    Rnew <- as.data.frame(Rnew)
+  }
+  ## remove last column and return the correlation matrix
+  Rnew <- cbind(Rnew[1:length(Rnew)-1])
+  if (result[1]=="none") return(Rnew)
+  else{
+    if(result[1]=="html") print(xtable(Rnew), type="html")
+    else print(xtable(Rnew), type="latex")
+  }
+}
+corstars(hmc_corrcomplete)
+corstars(hmc_corrcomplete, result="html")
+corrplot(hmc_corrcomplete)
+
+#alright, now that we have most of the data, we can start running preliminary ANOVAs with cat variables: 
+
+#first, let's look at subjective stress measures and income: 
+
+#Let's look at income and PDI_TOT (total perinatal distress)
+view(harveymomcleaned)
+PDI_TOTxIncome <- aov(PDI_TOT ~ factor(demo2_income.x), data = harveymomcleaned)
+summary(PDI_TOTxIncome) #NULL p=0.339 df=3
+#box plot:
+PDI_TOTxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_income.x, y = PDI_TOT)) + geom_boxplot() + xlab("Income Group") + ylab("Total Perinatal Distress") 
+PDI_TOTxIncome_Box   
+#kruskal: 
+kruskal.test(PDI_TOT ~ demo2_income.x, data = harveymomcleaned) #null p=.4017 #df=3 chis=2.9352
+
+#let's look at income and anxiety: 
+
+#box plot:
+IDASPa_R_logxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_income.x, y = IDASPa_R_log)) + geom_boxplot() + xlab("Income Group") + ylab("Perinatal Anxiety") 
+IDASPa_R_logxIncome_Box  
+#ANOVA: 
+IDASPa_R_logxIncome <- aov(IDASPa_R_log ~ factor(demo2_income.x), data = harveymomcleaned)
+summary(IDASPa_R_logxIncome) #p=0.00638** df=3 F= 4.798
+#let's do bonferonni: 
+pairwise.t.test(harveymomcleaned$IDASPa_R_log, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
+#difference in IDASPR_a_R scores in first income group to fourth: p=.0137*
+#let's do tukey: 
+TukeyHSD(IDASPa_R_logxIncome, conf.level=.95) #basically all 
+#lowest income group and highest income group p=.0117567*
+#let's do kruskal: 
+kruskal.test(IDASPa_R_log ~ demo2_income.x, data = harveymomcleaned) #p=.01734* df=3 chisq=10.149
+
+#let's look at income and depression:
+IDASGD_R_sqrtxIncome <- aov(IDASGD_R_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+summary(IDASGD_R_sqrtxIncome) #p= 0.00229 ** df= 3, F= 5.828
+#must do bonferonni
+pairwise.t.test(harveymomcleaned$IDASGD_R_sqrt, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
+#difference in depression first income to fourth: p=.0047**
+#boxplot: 
+IDASGD_R_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_income.x, y = IDASGD_R_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Perinatal Depression") 
+IDASGD_R_sqrtxIncome_Box
+#variances unequal:
+kruskal.test(IDASGD_R_sqrt ~ demo2_income.x, data = harveymomcleaned) #p=.01734* df=3 chis=10.149
+
+#let's look at income and total IESR score:
+IESR_T_R_sqrtxIncome <- aov(IESR_T_R_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+summary(IESR_T_R_sqrtxIncome) #INTERESTING. p=.0216* df=3 F= 3.628
+#bonferonni:
+pairwise.t.test(harveymomcleaned$IESR_T_R_sqrt, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
+#only groups 1 and 3 and 1 and 4 survived bonferroni correction! #1 and 3: p=.036*, 1 and 4: p=.027*
+#boxplot: 
+IESR_T_R_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_income.x, y = IESR_T_R_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Total Flood-Related Stress") 
+IESR_T_R_sqrtxIncome_Box
+#variances unequal: 
+kruskal.test(IESR_T_R_sqrt ~ demo2_income.x, data = harveymomcleaned) #p=.0453* df=3 chisq=8.0349
+
+
+
+#time to look at objective stress measures and income:
+
+#let's look at income and total objective stress:
+HOSS200_logxIncome <- aov(HOSS200_log ~ factor(demo2_income.x), data = harveymomcleaned)
+summary(HOSS200_logxIncome) #interesting too. p=.02274* df= 3 F= 3.408
+#bonferoni:
+pairwise.t.test(harveymomcleaned$HOSS200_log, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
+# interesting, looks like group 1 and 2 didnt survive bonf, but groups 1 and 4:p=.025* 
+#boxplot: 
+HOSS200_logxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_income.x, y = HOSS200_log)) + geom_boxplot() + xlab("Income Group") + ylab("Total Objective Stress") 
+HOSS200_logxIncome_Box
+#okay but variances are not equal so: 
+kruskal.test(HOSS200_log ~ demo2_income.x, data = harveymomcleaned)
+#chi squared= 8.8106, df= 3, p=.03192*
+#correct for mult comparisons: 
+
+
+
+#let's look at income and objective threat:
+threat50_wsqrtxIncome <- aov(threat50_wsqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+summary(threat50_wsqrtxIncome) #null. #p=.0797 df=3 F=2.44
+#boxplot: 
+threat50_wsqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_income.x, y = threat50_wsqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Objective Threat") 
+threat50_wsqrtxIncome_Box
+#variances not the same: 
+kruskal.test(threat50_wsqrt ~ demo2_income.x, data = harveymomcleaned) #p=0.081, df=3 chisq 6.71 #not sig
+
+#let's look at income and objective loss:
+loss50_sqrtxIncome <- aov(loss50_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+summary(loss50_sqrtxIncome) #damn. p=.000436*** df= 3 F= 7.616
+#bonferonni:
+pairwise.t.test(harveymomcleaned$loss50_sqrt, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
+#almost all groups survived: 1 and 4: p=.00047***
+#boxplot: 
+loss50_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_income.x, y = loss50_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Objective Loss") 
+loss50_sqrtxIncome_Box
+#variances not the same: 
+kruskal.test(loss50_sqrt ~ demo2_income.x, data = harveymomcleaned) #p=.00243**, chisq = 14.381, df=3
+#
+pairwise.wilcox.test(harveymomcleaned$loss50_sqrt, harveymomcleaned$demo2_income.x,
+                     p.adjust.method = "BH") #getting error message 
+
+
+#let's look at income and scope: 
+scope50_sqrtxIncome <- aov(scope50_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+summary(scope50_sqrtxIncome) #null. #p=.0535 df=3 F= 2.798
+#boxplot: 
+scope50_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_income.x, y = scope50_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Objective Scope") 
+scope50_sqrtxIncome_Box
+#variances not same: 
+kruskal.test(scope50_sqrt ~ demo2_income.x, data = harveymomcleaned) #p=.0953 null df=3 chisq= 6.3613
+#
+pairwise.wilcox.test(harveymomcleaned$scope50_sqrt, harveymomcleaned$demo2_income.x,
+                     p.adjust.method = "BH")
+#let's look at income and change:
+Change50_sqrtxIncome <- aov(Change50_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+summary(Change50_sqrtxIncome) #null. p=.14 F=1.94
+#boxplot: 
+Change50_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_income.x, y = Change50_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Objective Change") 
+Change50_sqrtxIncome_Box
+#variances are similar!
+
+#maternal education and total PDI score: 
+#boxplot: 
+demo2_education.x_PDI_TOT <- harveymomcleaned %>% filter(is.na(demo2_education.x) == FALSE) %>% 
+  ggplot(aes(group= demo2_education.x, y = PDI_TOT)) + geom_boxplot() + xlab("Maternal education") + ylab("total pdi score") 
+demo2_education.x_PDI_TOT
+#groups are too small
+
+
+#sex of child and total externalizing score:
+#boxplot:
+c_sex_CBINT_sqrt <- harveymomcleaned %>% filter(is.na(c_sex) == FALSE) %>% 
+  ggplot(aes(group= c_sex, y = CBINT_sqrt)) + geom_boxplot() + xlab("Child Sex") + ylab("Child Internalizing Score") 
+c_sex_CBINT_sqrt
+
+#pregnant stage during harvey and IESR_t score: 
+#boxplot: 
+Trimester_280_IESR_T_R_sqrt <- harveymomcleaned %>% filter(is.na(Trimester_280) == FALSE) %>% 
+  ggplot(aes(group= Trimester_280, y = IESR_T_R_sqrt)) + geom_boxplot() + xlab("Pregnancy Trimester") + ylab("Maternal Flood Stress Score") 
+  Trimester_280_IESR_T_R_sqrt
+#unequal variances: 
+kruskal.test(IESR_T_R_sqrt ~ Trimester_280, data = harveymomcleaned) #not sig p=.4208, damn! 
+
+#pregnant stage during harvey and total PDI score:
+Trimester_280_PDI_TOT <- harveymomcleaned %>% filter(is.na(PDI_TOT) == FALSE) %>% 
+  ggplot(aes(group= Trimester_280, y = PDI_TOT)) + geom_boxplot() + xlab("Pregnancy Trimester") + ylab("Total PDI Score") 
+Trimester_280_PDI_TOT 
+#unequal: 
+kruskal.test(PDI_TOT ~ Trimester_280, data = harveymomcleaned) #null p=.6539
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
