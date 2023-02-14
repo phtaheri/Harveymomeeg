@@ -1,383 +1,580 @@
-library("dplyr")
-library("lattice")
-library("survival")
-library("Formula")
-library("ggplot2")
-library("PerformanceAnalytics")
-library("rcompanion")
-library("compareGroups")
-library("sjmisc")
-library("xtable")
-library("corrplot")
-library("psych")
-library("apaTables")
-library("multcomp")
-
+library(reshape2)
+library(dplyr)
+library(tidyverse)
+library(reshape2)
+library(ggplot2)
+library(psych)
+library(moments)
+library(DescTools)
+#library(Hmisc) for describe
 setwd("/Users/parsanajmaie/Desktop/Data for Parsa")
 
-harveymomcleaned <- read.csv("harveymomcleaned2.1.23.csv")
+#wide files
+data18 <- read.csv('HarveyMomStudy-Download1824mo_DATA_2022-11-25_1102.csv')
+data42 <- read.csv('HarveyMomStudy-Download42mon_DATA_2022-11-25_1059.csv')
 
-#first, load the column names: 
-names(harveymomcleaned)
+#convert integers to character to make merging easy 
+data42$record_id <- as.character(data42$record_id)
+data42$record_id 
 
-#first let's create a composite variable for the IDAS: 
-IDAS_C <- harveymomcleaned[17:18]
-IDAS_C
+#step 1: rename one so that there is only one matching variable name, which is record_id
 
-#next we have to define all of our variables: 
-c_age <- harveymomcleaned[3]
-c_age_neg <- harveymomcleaned[4]
-bo_gest_age <- harveymomcleaned[5]
-bo_gest_age_win <- harveymomcleaned[6]
-bo_weight_lbs <- harveymomcleaned[7]
-c_sex <- harveymomcleaned[8]
-c_race <- harveymomcleaned[9]
-c_ethnicity <- harveymomcleaned[10]
-MomAgeAtRec <- harveymomcleaned[11]
-demo2_income.x <- harveymomcleaned[12]
-demo2_education.x <- harveymomcleaned[13]
-demo2_employed.x <- harveymomcleaned[14]
-demo2_relation.x <- harveymomcleaned[15]
-Trimester_280 <- harveymomcleaned[16]
-PregnantAtRecruitment <- harveymomcleaned[17]
-PregnantDuringHarvey_280 <- harveymomcleaned[18]
-PDI_TOT <- harveymomcleaned[19]
-IESR_T_R_sqrt <- harveymomcleaned[20]
-IDASGD_R_sqrt <- harveymomcleaned[21]
-IDASPa_R_log <- harveymomcleaned[22]
-HOSS200_log <- harveymomcleaned[23]
-threat50_wsqrt <- harveymomcleaned[24]
-loss50_sqrt <- harveymomcleaned[25]
-scope50_sqrt <- harveymomcleaned[26]
-Change50_sqrt<- harveymomcleaned[27]
-CBEMR_wsqrt <- harveymomcleaned[28]
-CBAND_sqrt <- harveymomcleaned[29]
-CBSOM_sqrt <- harveymomcleaned[30]
-CBSOM_wsqrt <- harveymomcleaned[31]
-CBWIT_wsqrt <- harveymomcleaned[32]
-CBLSP_sqrt <- harveymomcleaned[33]
-CBATT_sqrt <- harveymomcleaned[34]
-CBAGG_sqrt <- harveymomcleaned[35]
-CBOTH_log <- harveymomcleaned[36]
-CBINT_sqrt <- harveymomcleaned[37]
-CBEXT_sqrt <- harveymomcleaned[38]
-CBTOT_log <- harveymomcleaned[39]
-CBAFFt <- harveymomcleaned[40]
-CBANXt <- harveymomcleaned[41]
-CBPDDt <- harveymomcleaned[42]
-CBADDt <- harveymomcleaned[43]
-CBODDt <- harveymomcleaned[44]
-CBAGGt <- harveymomcleaned[45]
-CBINTt <- harveymomcleaned[46]
-CBEXTt <- harveymomcleaned[47]
-CBTOTt <- harveymomcleaned[48]
+names(data18)[names(data18) == "redcap_event_name"] <- "eventarm_18"
 
-#must do this for all variables you're trying to correlate. 
+#step 2: once you've renamed one, should be able to use dplr full join function and do it by record_id
 
-#next we have to bind the variables that we want to correlate
-#you have to write out a correlation for each correlation of interest that we have. 
-
-#let's look at PDI total score and child's externalizing score: 
-
-PDI_TOT_CBEXT_sqrt <- cbind(PDI_TOT, CBEXT_sqrt)
-head(PDI_TOT_CBEXT_sqrt)
-#once you've bound them, you can create your correlation matrix: 
-chart.Correlation(PDI_TOT_CBEXT_sqrt, histogram=TRUE, method= "pearson") #significant*
+dataa1842 <- dplyr::full_join(data18, data42, by = "record_id") 
 
 
-#let's look at PDI total score and child's internalizing score: 
-PDI_TOT_CBINT_sqrt <- cbind(PDI_TOT, CBINT_sqrt)
-head(PDI_TOT_CBINT_sqrt)
-chart.Correlation(PDI_TOT_CBINT_sqrt, histogram=TRUE, method= "pearson") #significant**
+#step 3: remove the rows that you no longer need due to 9 participants not doing EEG 
 
-#let's look at PDI total score and child's total problem score: 
-PDI_TOT_CBTOT_log <- cbind(PDI_TOT, CBTOT_log)
-head(PDI_TOT_CBTOT_log)
-chart.Correlation(PDI_TOT_CBTOT_log, histogram=TRUE, method= "pearson") #significant* 
+#remove rows
+data1842 <- dataa1842[-c(6, 7, 16, 17, 21, 25, 32, 46, 54),]
+data1842
 
-#let's look at maternal total objective stress and child's externalizing score: 
-HOSS200_log_CBEXT_sqrt <- cbind(HOSS200_log, CBEXT_sqrt)
-head(HOSS200_log_CBEXT_sqrt)
-chart.Correlation(HOSS200_log_CBEXT_sqrt, histogram=TRUE, method= "pearson") #interesting, also not significant
+#things to clean-> 
+#histograms, distributions, make sure there aren't any extreme outliers for things that dont make sense, 
+#if there are no outliers that dont make sense, but some w skewed results-> make a note, comment and say that ex: income rly skewed to rich 
+#2 functions rly helpful: plotNormalHistogram() (look up exact one, might be caps or not) and identify.outliers()
 
-#let's look at maternal total objective stress and child's internalizing score: 
-HOSS200_log_CBINT_sqrt <- cbind(HOSS200_log, CBINT_sqrt)
-head(HOSS200_log_CBINT_sqrt)
-chart.Correlation(HOSS200_log_CBINT_sqrt, histogram=TRUE, method= "pearson") #interesting, not significant
+#child sex variable
+table(data1842$c_sex) 
+#1 n= 23 m
+#2 N= 19 f
 
-#let's look at maternal total objective stress and child's total problem score: 
-HOSS200_log_CBTOT_log <- cbind(HOSS200_log, CBTOT_log)
-head(HOSS200_log_CBTOT_log)
-chart.Correlation(HOSS200_log_CBTOT_log, histogram=TRUE, method= "pearson") #interesting, not significant
+#child age in months at first time-point
 
-#let's look at maternal total flood stress and child's externalizing problems: 
-IESR_T_R_sqrt_CBEXT_sqrt <- cbind(IESR_T_R_sqrt, CBEXT_sqrt)
-head(IESR_T_R_sqrt_CBEXT_sqrt)
-chart.Correlation(IESR_T_R_sqrt_CBEXT_sqrt, histogram=TRUE, method= "pearson") #not significant 
+#first we have to fill in the missing data! Here's how we do that: 
+#for participant 25: 
+data1842$c_age[1] <- 20
+data1842
 
-#let's look at maternal total flood stress and child's internalizing problems:
-IESR_T_R_sqrt_CBINT_sqrt <- cbind(IESR_T_R_sqrt, CBINT_sqrt)
-head(IESR_T_R_sqrt_CBINT_sqrt)
-chart.Correlation(IESR_T_R_sqrt_CBINT_sqrt, histogram=TRUE, method= "pearson") #not significant 
+#participant 106: 
+data1842$c_age[6] <- 24
+data1842
 
-#let's look at maternal total flood stress and child's total problems: 
-IESR_T_R_sqrt_CTOT_log <- cbind(IESR_T_R_sqrt, CBTOT_log)
-head(IESR_T_R_sqrt_CBTOT_log)
-chart.Correlation(IESR_T_R_sqrt_CBTOT_log, histogram=TRUE, method= "pearson") #not significant
+#participant 1137: 
+data1842$c_age[34] <- 24
+data1842
 
-#let's make a dataframe with only continuous variables that we would correlate: 
-harveymomcleaned_cont <- harveymomcleaned[, c("PDI_TOT", "IESR_T_R_sqrt", "IDASGD_R_sqrt", "IDASPa_R_log", "HOSS200_log", 
-                                        "threat50_wsqrt", "loss50_sqrt", "CBEMR_wsqrt", 
-                                        "CBWIT_wsqrt", "CBSLP_sqrt", "CBATT_sqrt", "CBAGG_sqrt", 
-                                        "CBOTH_log", "CBINT_sqrt", "CBEXT_sqrt", "CBTOT_log")] 
+#participant 1543
+data1842$c_age[40] <- 25
+data1842
 
-#let's make a dataframe with less continuous variables that we would correlate for the poster: 
-harveymomcleaned_cont_post <- harveymomcleaned[, c("PDI_TOT", "IESR_T_R_sqrt", "IDASGD_R_sqrt", "IDASPa_R_log", "HOSS200_log", 
-                                                    "CBINT_sqrt", "CBEXT_sqrt", "CBTOT_log")] 
+#participant 1651
+data1842$c_age[42] <- 22
+data1842
 
-#I can also make an APA correlation table:
+#now we can look at the data: 
 
-apa.cor.table(
-  harveymomcleaned_cont,
-  filename = "harveymomcleaned_cont.doc",
-  table.number = NA,
-  show.conf.interval = TRUE,
-  show.sig.stars = TRUE,
-  landscape = TRUE
-)
-view(behavioral_cor_tab)
+hist(data1842$c_age)
+mean(data1842$c_age, na.rm = TRUE) #23.26 months
+skewness(data1842$c_age, na.rm = TRUE) #-.58, slightly negatively skewed
+describe(data1842$c_age)
+#^for og data, now we have to transform for neg skew: constant would be 29, 28=max +1
+data1842$c_age_neg <- sqrt(29 - data1842$c_age)
+describe(data1842$c_age_neg) #beautiful. mean= 2.33
+hist(data1842$c_age_neg)
 
-#Way to look at correlation matrix with variables of interest: 
-library(PerformanceAnalytics)
-chart.Correlation(harveymomcleaned_cont, histogram = TRUE, method = "pearson")
+#child race
+#first, convert race into numbers:
 
-#corr matrix with poster variables: 
-harveymom_poster_corr_mat <- chart.Correlation(harveymomcleaned_cont_post, histogram = TRUE, method = "pearson")
-harveymom_poster_corr_mat #null.
+data_1842 <- data1842 %>%
+    mutate(c_race = case_when(
+      c_race == "b"  ~ 1,
+      c_race == "c"  ~ 2,
+      c_race == "d" ~ 3,
+      c_race == "e" ~ 4,
+      c_race == "f" ~ 5
+    ))
+                                                                                      
+hist(data_1842$c_race) #mostly white sample
+#4= white, #1 asian, #2 black #3 Native #5 other 
 
-#to look at all of the correlations, you can create a correlation matrix: 
+#frequency: 
+table(data_1842$c_race)
+#38 total 
+#3 asian- 8%
+#4 black 11%
+#24 white- 63%
+#4 other- 18% 
 
-hmc_corrcomplete <- harveymomcleaned %>%
-  select(bo_gest_age_win, bo_weight_lbs, PDI_TOT, IESR_T_R_sqrt, IDASGD_R_sqrt, IDASPa_R_log, HOSS200_log, 
-         threat50_wsqrt, loss50_sqrt, CBEMR_wsqrt, 
-         CBWIT_wsqrt, CBSLP_sqrt, CBATT_sqrt, CBAGG_sqrt, 
-CBOTH_log, CBINT_sqrt, CBEXT_sqrt, CBTOT_log)
-hmc_corrcomplete
-corstars <-function(x, method= "pearson", removeTriangle=c("upper", "lower"),
-                    result=c("none", "html", "latex")){
+#childethnicity 
+
+#first convert ethnicity into numbers: 
+
+data__1842 <- data_1842 %>%
+  mutate(c_ethnicity = case_when(
+    c_ethnicity == "a"  ~ 1,
+    c_ethnicity == "b"  ~ 2,
+  ))
+
+hist(data__1842$c_ethnicity) #mostly non-hispanic white
+table(data__1842$c_ethnicity) 
+#38 responded
+#1 = hispanic - 9
+#2 = nonhispanic - 29 
+
+
+#income
+#first convert income into numbers: 
+data___1842 <- data__1842 %>%
+  mutate(demo2_income = case_when(
+    demo2_income == "a"  ~ 0,
+   demo2_income == "b"  ~ 1,
+    demo2_income == "c" ~ 2,
+    demo2_income == "d" ~ 3,
+   demo2_income == "e" ~ 4,
+   demo2_income == "f" ~ 5, 
+   demo2_income == "g"  ~ 6,
+   demo2_income == "h"  ~ 7,
+   demo2_income == "i" ~ 8,
+   demo2_income == "j" ~ 9
+  ))
+
+
+hist(data___1842$demo2_income)
+#'0: less than $10,000' '1: $10,001 - $25,000' '2: $25,001 - $50,000' '3: $50,001 - $75,000' '4: $75,001 - $100,000' 
+# what does 10 mean???*** categories don't match up to codebook
+#3 seems to be outlier?
+#mostly poor sample, skewed poorer
+table(data___1842$demo2_income)
+#42 responded
+#0 - 3
+#1 - 1 
+#0 and 1 = 4 - less than 25k
+#2 - 9 
+#3 - 6 
+#2 and 3 = 16 - 25-75k 
+#4 - 7 
+#5 - 6 
+#4 and 5 = 13 - 75-125k
+#6 - 4
+#7 - 2 
+#8 - 3
+#6,7,8 = 9 - 125k + 
+
+#next I want to recode income into 4 categories:
+
+data___1842 <- data___1842 %>%
+  mutate(demo2_income = case_when(
+    demo2_income == "0"  ~ 1,
+    demo2_income == "1"  ~ 1,
+    demo2_income == "2" ~ 2,
+    demo2_income == "3" ~ 2,
+    demo2_income == "4" ~ 3,
+    demo2_income == "5" ~ 3, 
+    demo2_income == "6" ~ 4,
+    demo2_income == "7" ~ 4,
+    demo2_income == "8" ~ 4,
+    demo2_income == "9" ~ 4
+  ))
+table(data___1842$demo2_income)
+#4 less than 25k 
+#15 between 25 and 75k
+#13 between 75 and 125k
+#9 125k+
+#maternal employment
+
+table(data___1842$demo2_employed)
+#no = 0 = 20 49%
+#yes = 1 = 21 51%
+
+#maternal education at first timepoint: 
+#first convert mated into numbers: 
+
+data____1842 <- data___1842 %>%
+  mutate(demo2_education = case_when(
+    demo2_education == "a"  ~ 0,
+    demo2_education == "b"  ~ 1,
+    demo2_education== "c" ~ 2,
+    demo2_education == "d" ~ 3,
+    demo2_education == "e" ~ 4,
+    demo2_education == "f" ~ 5, 
+    demo2_education == "g" ~ 6,
+    demo2_education == "f" ~ 7
+  ))
+
+hist(data____1842$demo2_education)
+#'0: Did not complete high school' '1: GED' '2: High School' '3: Some college' '4: Vocational, Technical, or Associate's' and more     
+# it's a mostly bachelors educated sample. 
+
+table(data____1842$demo2_education)
+#total= 40
+#2 - 1
+#3 - 6
+#4 - 1
+#5 - 20
+#6 - 12 
+
+
+#maternal relationship status first timepoint: 
+#first convert demo2_relation into numbers: 
+
+data_____1842 <- data____1842 %>%
+  mutate(demo2_relation = case_when(
+    demo2_relation == "a"  ~ 0,
+    demo2_relation == "b"  ~ 1,
+    demo2_relation == "c" ~ 2,
+    demo2_relation == "d" ~ 3,
+    demo2_relation == "e" ~ 4,
+    demo2_relation == "f" ~ 5, 
+    demo2_relation == "g" ~ 6
+  ))
+#single=0, #married=1, #separated=3 
+
+hist(data_____1842$demo2_relation) 
+#mostly married sample d
+
+table(data_____1842$demo2_relation)
+#3 single 7%
+#38 married 93%
+
+#now i need to get data from baseline, so I'm going to merge the two dataframes.
+
+#display the wide files
+baselinedata <- read.csv('Harvey_full_R_6M.csv')
+
+#convert integers to character to make merging easy 
+baselinedata$record_id <- as.character(baselinedata$record_id)
+baselinedata$record_id 
+
+#step 2: now you can use dplyr full join function and do it by record_id
+
+harveymomcomplete <- dplyr::full_join(data_____1842, baselinedata, by = "record_id") 
+
+#now I'm going to look at some continuous variables to include in the demos: 
+
+#subjective stress related to harvey scale- IESR total: 
+
+hist(harveymomcomplete$IESR_T_R)  #mostly lower stress, ***positive skew* could transform 
+mean(harveymomcomplete$IESR_T_R, na.rm = TRUE)  #21.39 is the mean
+skewness(harveymomcomplete$IESR_T_R, na.rm = TRUE) #.88, moderate positive skew, so we have to transform the data
+harveymomcomplete <- harveymomcomplete %>%
+  mutate(IESR_T_R_sqrt <- sqrt(harveymomcomplete$IESR_T_R)) #take sqrt to get rid of skew
+hist(harveymomcomplete$IESR_T_R_sqrt)
+describe(harveymomcomplete$IESR_T_R_sqrt) #LOOKS GOOD
+describe(harveymomcomplete$IESR_T_R, na.rm = TRUE)  #range 67, 19.94 sd <- this is for OG data
+
+#IDAS- measure of depression and anxiety, subjective stress measure at baseline: 
+
+#general depression scale:IDASGD_R
+hist(harveymomcomplete$IDASGD_R)  #mostly lower stress, looks good 
+skewness(harveymomcomplete$IDASGD_R, na.rm = TRUE) #.625, moderately positive skew-> must transform
+mean(harveymomcomplete$IDASGD_R, na.rm = TRUE) #46.97 
+harveymomcomplete <- harveymomcomplete %>%
+  mutate(IDASGD_R_sqrt <- sqrt(harveymomcomplete$IDASGD_R)) 
+hist(harveymomcomplete$IDASGD_R_sqrt) #hell yeah, looks way better 
+describe(harveymomcomplete$IDASGD_R_sqrt) #LOOKS WAY BETTER
+describe(harveymomcomplete$IDASGD_R, na.rm = TRUE)  #this is for OG data, range 69, 14.98 std 
   
-  #Compute correlation matrix
-  require(Hmisc)
-  x <- as.matrix(x)
-  correlation_matrix<-rcorr(x, type=method[1])
-  R <- correlation_matrix$r # Matrix of correlation coeficients
-  p <- correlation_matrix$P # Matrix of p-value
-  ## Define notions for significance levels; spacing is important.
-  mystars <- ifelse(p < .0001, "****", ifelse(p < .001, "*** ", ifelse(p < .01, "**  ", ifelse(p < .05, "*   ", "    "))))
-  ## trunctuate the correlation matrix to two decimal
-  R <- format(round(cbind(rep(-1.11, ncol(x)), R), 2))[,-1]
-  ## build a new matrix that includes the correlations with their appropriate stars
-  Rnew <- matrix(paste(R, mystars, sep=""), ncol=ncol(x))
-  diag(Rnew) <- paste(diag(R), " ", sep="")
-  rownames(Rnew) <- colnames(x)
-  colnames(Rnew) <- paste(colnames(x), "", sep="")
-  ## remove upper triangle of correlation matrix
-  if(removeTriangle[1]=="upper"){
-    Rnew <- as.matrix(Rnew)
-    Rnew[upper.tri(Rnew, diag = TRUE)] <- ""
-    Rnew <- as.data.frame(Rnew)
-  }
-  ## remove lower triangle of correlation matrix
-  else if(removeTriangle[1]=="lower"){
-    Rnew <- as.matrix(Rnew)
-    Rnew[lower.tri(Rnew, diag = TRUE)] <- ""
-    Rnew <- as.data.frame(Rnew)
-  }
-  ## remove last column and return the correlation matrix
-  Rnew <- cbind(Rnew[1:length(Rnew)-1])
-  if (result[1]=="none") return(Rnew)
-  else{
-    if(result[1]=="html") print(xtable(Rnew), type="html")
-    else print(xtable(Rnew), type="latex")
-  }
-}
-corstars(hmc_corrcomplete)
-corstars(hmc_corrcomplete, result="html")
-corrplot(hmc_corrcomplete)
+#Panic scale: IDASPa_R
+hist(harveymomcomplete$IDASPa_R) #mostly low anxiety, ***HEAVY positive skew and kurtosis -> must transform
+harveymomcomplete <- harveymomcomplete %>%
+  mutate(IDASPa_R_log <- log10(harveymomcomplete$IDASGD_R))
+hist(harveymomcomplete$IDASPa_R_log) 
+describe(harveymomcomplete$IDASPa_R_log, na.rm = TRUE) #damn, looks WAY better!!!! #1.65 mean
+#these are for the OG data:
+mean(harveymomcomplete$IDASPa_R, na.rm = TRUE)  #10.94 mean og data 
+describe(harveymomcomplete$IDASPa_R, na.rm = TRUE)
+
+
+#perinatal distress measure of stress from flood: PDI_TOT 
+hist(harveymomcomplete$PDI_TOT) #mostly low-moderate stress , looks good 
+mean(harveymomcomplete$PDI_TOT, na.rm = TRUE) #22.38 mean 
+describe(harveymomcomplete$PDI_TOT, na.rm = TRUE)
+
+#total objective stress during hurricane harvey: HOSS200
+hist(harveymomcomplete$HOSS200)  #pretty low stress TBH **positive skew** 
+mean(harveymomcomplete$HOSS200, na.rm = TRUE)  #35.83 mean 
+describe(harveymomcomplete$HOSS200, na.rm = TRUE) #skew of 1. high positive skew, gotta transform
+#^ above are for OG data, below, we are going to transform to fit normal: 
+harveymomcomplete <- harveymomcomplete %>%
+  mutate(HOSS200_log <- log10(harveymomcomplete$HOSS200))
+hist(harveymomcomplete$HOSS200_log) 
+describe(harveymomcomplete$HOSS200_log, na.rm = TRUE) #hell yeah, way better mean=1.37
+  
+#threat subscale for objective stress: threat50
+hist(harveymomcomplete$threat50) # pretty low threat, looks positively skewed AF
+mean(harveymomcomplete$threat50, na.rm = TRUE) #4.45 mean 
+describe(harveymomcomplete$threat50, na.rm = TRUE) #yep heavily positively skewed and high kurtosis.
+#^above are for OG data. below, must transform. skew=2.38=severe skew, let's try taking the inverse
+#first we gotta deal with outliers, because there are so many. let's winsorize: 
+harveymomcomplete$threat50_win <- Winsorize(harveymomcomplete$threat50)
+describe(harveymomcomplete$threat50_win, na.rm = TRUE) #kurtosis is low now but skew is still 1.62
+hist(harveymomcomplete$threat50_win) 
+harveymomcomplete <- harveymomcomplete %>%
+  mutate(threat50_wsqrt <- sqrt(harveymomcomplete$threat50_win)) #log10 didnt work, but this did
+hist(harveymomcomplete$threat50_wsqrt) 
+describe(harveymomcomplete$threat50_wsqrt, na.rm = TRUE) #skew is now low, kurtosis is low too. everything looks better
+
+
+#loss subscale for objective stress: loss50
+hist(harveymomcomplete$loss50) #pretty low threat
+mean(harveymomcomplete$loss50, na.rm = TRUE) #10.64 mean
+describe(harveymomcomplete$loss50, na.rm = TRUE) #substantial positive skew: 1.04
+#^above og data, to transform: 
+harveymomcomplete <- harveymomcomplete %>%
+  mutate(loss50_sqrt <- sqrt(harveymomcomplete$loss50))
+hist(harveymomcomplete$loss50_sqrt) 
+describe(harveymomcomplete$loss50_sqrt, na.rm = TRUE) #way better :) #mean= 2.66
+
+#scope subscale for objective stress: scope50
+hist(harveymomcomplete$scope50) #pretty low scope with a positive skew 
+mean(harveymomcomplete$scope50, na.rm = TRUE) #12.66 avg, sd is similar!
+describe(harveymomcomplete$scope50, na.rm = TRUE)
+#^ above are for og data, transform to get rid of skew: 
+harveymomcomplete <- harveymomcomplete %>%
+  mutate(scope50_sqrt <- sqrt(harveymomcomplete$scope50)) 
+hist(harveymomcomplete$scope50_sqrt) 
+describe(harveymomcomplete$scope50_sqrt, na.rm = TRUE) #beautiful, mean=3.07
+
+
+#change subscale for objective stress: Change50
+hist(harveymomcomplete$Change50) #low change lol, positive skew 
+mean(harveymomcomplete$Change50, na.rm = TRUE) #8.04 mean 5.54 sd
+describe(harveymomcomplete$Change50, na.rm = TRUE) #moderate positive skew
+#^above are for OG data, we are going to transform to get rid of skew: 
+harveymomcomplete <- harveymomcomplete %>%
+  mutate(Change50_sqrt <- sqrt(harveymomcomplete$Change50))
+hist(harveymomcomplete$Change50_sqrt) 
+describe(harveymomcomplete$Change50_sqrt, na.rm = TRUE) #gorgeous, mean=2.63
+
+
+#also from baseline, I need gestational age: bo_gest_age
+hist(harveymomcomplete$bo_gest_age) #looks like data is more negatively skewed
+mean(harveymomcomplete$bo_gest_age, na.rm = TRUE) #mean is 38.53 weeks, mostly at term
+describe(harveymomcomplete$bo_gest_age, na.rm = TRUE) #high kurtosis and skew. let's deal w kurtosis first: 
+harveymomcomplete <- harveymomcomplete %>%
+  mutate(bo_gest_age_win <- Winsorize(harveymomcomplete$bo_gest_age, na.rm = TRUE))
+describe(harveymomcomplete$bo_gest_age_win, na.rm = TRUE) #looks like skew is under control and so is kurtosis! mean=38.69
+
+
+#i also need birth weight from baseline: bo_weight_lbs
+hist(harveymomcomplete$bo_weight_lbs)
+mean(harveymomcomplete$bo_weight_lbs, na.rm = TRUE) #mean is 6.95 lbs 
+describe(harveymomcomplete$bo_weight_lbs, na.rm = TRUE) #normal distribution :)
+
+
+#i also need stage of pregnancy when exposed to hurricane harvey: Trimester_280
+table(harveymomcomplete$Trimester_280) #looks like most women were exposed in 2nd or 3rd trimester
+
+#and if pregnant or not at recruitment: 
+table(harveymomcomplete$PregnantAtRecruitment) #looks like 45 moms weren't pregnant at recruitment, 2 were tho
+
+#save your data bish
+write.csv(harveymomcomplete, "harveymomcomplete2.1.23.csv") 
+
+#now that I've gotten the data i need for maternal stress measures, I can go ahead 
+#and look at child's temperamental outcomes at the EEG scan time: 
+
+
+#now i need to get CBCL data from the follow up, so I'm going to merge the two dataframes.
+
+#display the wide files
+cbcldata <- read.csv('Harvey_CBCL_18_42mo.csv')
+
+#convert integers to character to make merging easy 
+cbcldata$record_id <- as.character(cbcldata$record_id)
+cbcldata$record_id 
+
+#step 1: rename one so that there is a matching variable name (but this didnt end up being necessary)
+
+names(cbcldata)[names(cbcldata) == "redcap_event_name"] <- "eventarm_18"
+
+#step 2: now you can use dplyr semi join function and do it by record_id so only the ones you care about show up
+
+
+#get rid of the 42 month follow up data
+cbcldata_clean<-cbcldata[!(cbcldata$eventarm_18=="42_mo_followup_arm_1"),]
+cbcldata_clean
+
+#get rid of the 9 participants we don't care about: 
+
+cbcl_dataclean <- cbcldata_clean[-c(6, 15, 16, 20, 24, 31, 45, 53, 56),]
+cbcl_dataclean
+
+#now we are ready to merge our datasets: bc they have the same number of rows, we can combine them!
+
+harveymomcbcl <- as.data.frame(c(harveymomcomplete, cbcl_dataclean))
+
+#gonna save as CSV so I can do a separate script for analyses: 
+
+
+#Okay so now let's look at the different scales: 
+
+#CBCL Emotionally reactive empirically scale: CBEMR
+hist(harveymomcbcl$CBEMR) #damn, heavy pos skew and outliers! 
+mean(harveymomcbcl$CBEMR, na.rm = TRUE) #2.40 mean 
+describe(harveymomcbcl$CBEMR, na.rm = TRUE) #range 0-13 #slightly large kurtosis and big pos skew
+#let's deal with kurtosis first-> winsorize: 
+harveymomcbcl$CBEMR_win <- Winsorize(harveymomcbcl$CBEMR, na.rm = TRUE)
+describe(harveymomcbcl$CBEMR_win, na.rm = TRUE) #better kurtosis, but skew still 1.41
+#now we have to deal with pos skew: 
+harveymomcbcl$CBEMR_wsqrt <- sqrt(harveymomcbcl$CBEMR_win)
+describe(harveymomcbcl$CBEMR_wsqrt) # way better!!! new mean= 1.18 
+
+#CBCL Anxious/depresssed empirically scale: CBAND
+hist(harveymomcbcl$CBAND)
+mean(harveymomcbcl$CBAND, na.rm = TRUE) #2.09 
+describe(harveymomcbcl$CBAND, na.rm = TRUE) # heavy pos skew, must transform:
+harveymomcbcl$CBAND_sqrt <- sqrt(harveymomcbcl$CBAND)
+describe(harveymomcbcl$CBAND_sqrt) # way better! mean=1.11
+
+#CBCL somatic complaints empirically scale: CBSOM
+hist(harveymomcbcl$CBSOM)
+mean(harveymomcbcl$CBSOM, na.rm = TRUE) #1.12
+describe(harveymomcbcl$CBSOM, na.rm = TRUE) #looks like there's a big pos skew must transform:
+harveymomcbcl$CBSOM_sqrt <- sqrt(harveymomcbcl$CBSOM)
+describe(harveymomcbcl$CBSOM_sqrt)
+hist(harveymomcbcl$CBSOM_sqrt) #there is still some pos skew- boo, what if we winsorize?
+#winsorizing:
+harveymomcbcl$CBSOM_wsqrt <- Winsorize(harveymomcbcl$CBSOM_sqrt, na.rm = TRUE)
+describe(harveymomcbcl$CBSOM_wsqrt) #now the distribution is closer to normal. mean=0.69
+hist(harveymomcbcl$CBSOM_wsqrt)
+
+
+#CBCL withdrawn empirically derived scale: CBWIT
+hist(harveymomcbcl$CBWIT) #big pos skew 
+mean(harveymomcbcl$CBWIT, na.rm = TRUE) #0.88
+describe(harveymomcbcl$CBWIT, na.rm = TRUE) #must transform:
+#let's winsorize first, 
+harveymomcbcl$CBWIT_win <- Winsorize(harveymomcbcl$CBWIT, na.rm = TRUE)
+describe(harveymomcbcl$CBWIT_win) #better kurtosis!, now let's change the skew:
+harveymomcbcl$CBWIT_wsqrt <- sqrt(harveymomcbcl$CBWIT_win)
+describe(harveymomcbcl$CBWIT_wsqrt)
+hist(harveymomcbcl$CBWIT_wsqrt) #better but not perfect! mean=.58, skew is still there though at .69**
+
+
+#CBCL sleep problems empirically derived scale: CBSLP
+hist(harveymomcbcl$CBSLP)
+mean(harveymomcbcl$CBSLP, na.rm = TRUE) #2.98
+describe(harveymomcbcl$CBSLP, na.rm = TRUE) #pos skew-> must transform below: 
+harveymomcbcl$CBSLP_sqrt <- sqrt(harveymomcbcl$CBSLP)
+describe(harveymomcbcl$CBSLP_sqrt) 
+hist(harveymomcbcl$CBSLP_sqrt) #nice. mean= 1.39 
+
+#CBCL attention problems empirically derived scale: CBATT
+hist(harveymomcbcl$CBATT) #positive skew
+mean(harveymomcbcl$CBATT, na.rm = TRUE) #2.23
+describe(harveymomcbcl$CBATT, na.rm = TRUE) #yeah, let's change the skew.
+harveymomcbcl$CBATT_sqrt <- sqrt(harveymomcbcl$CBATT)
+describe(harveymomcbcl$CBATT_sqrt) #nice. new mean=1.25
+hist(harveymomcbcl$CBATT_sqrt)
+
+
+#CBCL aggressive behavior empirically derived scale: CBAGG
+hist(harveymomcbcl$CBAGG) #another positive skew
+mean(harveymomcbcl$CBAGG, na.rm = TRUE) #7.86
+describe(harveymomcbcl$CBAGG, na.rm = TRUE) #yep skew = 1.42, kurtosis=1.45
+harveymomcbcl$CBAGG_sqrt <- sqrt(harveymomcbcl$CBAGG)
+describe(harveymomcbcl$CBAGG_sqrt) #nice. new mean=2.46 
+hist(harveymomcbcl$CBAGG_sqrt)
+
+#CBCL other problems scale: CBOTH 
+hist(harveymomcbcl$CBOTH)
+mean(harveymomcbcl$CBOTH, na.rm = TRUE) #7.12
+describe(harveymomcbcl$CBOTH, na.rm = TRUE) #high skew, must do log
+harveymomcbcl$CBOTH_log <- log10(harveymomcbcl$CBOTH)
+describe(harveymomcbcl$CBOTH_log, na.rm = TRUE) #nice. new mean=0.69
+hist(harveymomcbcl$CBOTH_log) 
+
+#CBCL internalizing scale: CBINT 
+hist(harveymomcbcl$CBINT)
+mean(harveymomcbcl$CBINT, na.rm = TRUE) #6.49
+describe(harveymomcbcl$CBINT, na.rm = TRUE) #skew and outliers: 
+harveymomcbcl$CBINT_sqrt <- sqrt(harveymomcbcl$CBINT)
+describe(harveymomcbcl$CBINT_sqrt, na.rm = TRUE) #nice. new mean= 2.13
+hist(harveymomcbcl$CBINT_sqrt) 
+
+
+#CBCL externalizing scale: CBEXT 
+hist(harveymomcbcl$CBEXT)
+mean(harveymomcbcl$CBEXT, na.rm = TRUE) #10.09, positive skew.
+describe(harveymomcbcl$CBEXT, na.rm = TRUE) #yep, 1.39 skew #must change
+harveymomcbcl$CBEXT_sqrt <- sqrt(harveymomcbcl$CBEXT)
+describe(harveymomcbcl$CBEXT_sqrt, na.rm = TRUE) #nice. new mean= 2.83
+hist(harveymomcbcl$CBEXT_sqrt) 
+
+#CBCL total problems scale: CBTOT
+hist(harveymomcbcl$CBTOT)
+mean(harveymomcbcl$CBTOT, na.rm = TRUE) #26.67
+describe(harveymomcbcl$CBTOT, na.rm = TRUE) #high skew and kurt:
+harveymomcbcl$CBTOT_log <- log10(harveymomcbcl$CBTOT)
+describe(harveymomcbcl$CBTOT_log, na.rm = TRUE) #nice. new mean= 1.27
+hist(harveymomcbcl$CBTOT_log) 
+
+
+#WRITE AS CSV: 
+write.csv(harveymomcbcl, "harveymomcbcl.csv")
+
 
 #alright, now that we have most of the data, we can start running preliminary ANOVAs with cat variables: 
 
 #first, let's look at subjective stress measures and income: 
 
 #Let's look at income and PDI_TOT (total perinatal distress)
-view(harveymomcleaned)
-PDI_TOTxIncome <- aov(PDI_TOT ~ factor(demo2_income.x), data = harveymomcleaned)
+view(harveymomcbcl)
+PDI_TOTxIncome <- aov(PDI_TOT ~ factor(demo2_income.x), data = harveymomcbcl)
 summary(PDI_TOTxIncome) #NULL p=0.339 df=3
+
 #box plot:
-PDI_TOTxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_income.x, y = PDI_TOT)) + geom_boxplot() + xlab("Income Group") + ylab("Total Perinatal Distress") 
-PDI_TOTxIncome_Box   
-#kruskal: 
-kruskal.test(PDI_TOT ~ demo2_income.x, data = harveymomcleaned) #null p=.4017 #df=3 chis=2.9352
+PDI_TOTxIncome_Box <- ggplot(data=harveymomcbcl, mapping=aes(group=demo2_income.x, y=PDI_TOT))+geom_boxplot()
+PDI_TOTxIncome_Box #why are there 5 boxes?!?!? someone help***
 
 #let's look at income and anxiety: 
 
 #box plot:
-IDASPa_R_logxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_income.x, y = IDASPa_R_log)) + geom_boxplot() + xlab("Income Group") + ylab("Perinatal Anxiety") 
-IDASPa_R_logxIncome_Box  
-#ANOVA: 
-IDASPa_R_logxIncome <- aov(IDASPa_R_log ~ factor(demo2_income.x), data = harveymomcleaned)
+IDASPa_R_logxIncome_Box <- ggplot(data=harveymomcbcl, mapping=aes(group=demo2_income.x, y=IDASPa_R_log))+geom_boxplot()
+IDASPa_R_logxIncome_Box #HELP WITH THIS CODE
+
+IDASPa_R_logxIncome <- aov(IDASPa_R_log ~ factor(demo2_income.x), data = harveymomcbcl)
 summary(IDASPa_R_logxIncome) #p=0.00638** df=3 F= 4.798
+
 #let's do bonferonni: 
-pairwise.t.test(harveymomcleaned$IDASPa_R_log, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
-#difference in IDASPR_a_R scores in first income group to fourth: p=.0137*
-#let's do tukey: 
-TukeyHSD(IDASPa_R_logxIncome, conf.level=.95) #basically all 
-#lowest income group and highest income group p=.0117567*
-#let's do kruskal: 
-kruskal.test(IDASPa_R_log ~ demo2_income.x, data = harveymomcleaned) #p=.01734* df=3 chisq=10.149
+
+#THIS IS WHERE U LEFT OFF
 
 #let's look at income and depression:
-IDASGD_R_sqrtxIncome <- aov(IDASGD_R_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+IDASGD_R_sqrtxIncome <- aov(IDASGD_R_sqrt ~ factor(demo2_income.x), data = harveymomcbcl)
 summary(IDASGD_R_sqrtxIncome) #p= 0.00229 ** df= 3, F= 5.828
+
 #must do bonferonni
-pairwise.t.test(harveymomcleaned$IDASGD_R_sqrt, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
-#difference in depression first income to fourth: p=.0047**
-#boxplot: 
-IDASGD_R_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_income.x, y = IDASGD_R_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Perinatal Depression") 
-IDASGD_R_sqrtxIncome_Box
-#variances unequal:
-kruskal.test(IDASGD_R_sqrt ~ demo2_income.x, data = harveymomcleaned) #p=.01734* df=3 chis=10.149
+
+#boxplot
 
 #let's look at income and total IESR score:
-IESR_T_R_sqrtxIncome <- aov(IESR_T_R_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+IESR_T_R_sqrtxIncome <- aov(IESR_T_R_sqrt ~ factor(demo2_income.x), data = harveymomcbcl)
 summary(IESR_T_R_sqrtxIncome) #INTERESTING. p=.0216* df=3 F= 3.628
+
 #bonferonni:
-pairwise.t.test(harveymomcleaned$IESR_T_R_sqrt, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
-#only groups 1 and 3 and 1 and 4 survived bonferroni correction! #1 and 3: p=.036*, 1 and 4: p=.027*
-#boxplot: 
-IESR_T_R_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_income.x, y = IESR_T_R_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Total Flood-Related Stress") 
-IESR_T_R_sqrtxIncome_Box
-#variances unequal: 
-kruskal.test(IESR_T_R_sqrt ~ demo2_income.x, data = harveymomcleaned) #p=.0453* df=3 chisq=8.0349
-
-
 
 #time to look at objective stress measures and income:
 
 #let's look at income and total objective stress:
-HOSS200_logxIncome <- aov(HOSS200_log ~ factor(demo2_income.x), data = harveymomcleaned)
+HOSS200_logxIncome <- aov(HOSS200_log ~ factor(demo2_income.x), data = harveymomcbcl)
 summary(HOSS200_logxIncome) #interesting too. p=.02274* df= 3 F= 3.408
-#bonferoni:
-pairwise.t.test(harveymomcleaned$HOSS200_log, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
-# interesting, looks like group 1 and 2 didnt survive bonf, but groups 1 and 4:p=.025* 
-#boxplot: 
-HOSS200_logxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_income.x, y = HOSS200_log)) + geom_boxplot() + xlab("Income Group") + ylab("Total Objective Stress") 
-HOSS200_logxIncome_Box
-#okay but variances are not equal so: 
-kruskal.test(HOSS200_log ~ demo2_income.x, data = harveymomcleaned)
-#chi squared= 8.8106, df= 3, p=.03192*
-#correct for mult comparisons: 
 
+#bonferonni:
 
 
 #let's look at income and objective threat:
-threat50_wsqrtxIncome <- aov(threat50_wsqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+threat50_wsqrtxIncome <- aov(threat50_wsqrt ~ factor(demo2_income.x), data = harveymomcbcl)
 summary(threat50_wsqrtxIncome) #null. #p=.0797 df=3 F=2.44
-#boxplot: 
-threat50_wsqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_income.x, y = threat50_wsqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Objective Threat") 
-threat50_wsqrtxIncome_Box
-#variances not the same: 
-kruskal.test(threat50_wsqrt ~ demo2_income.x, data = harveymomcleaned) #p=0.081, df=3 chisq 6.71 #not sig
 
 #let's look at income and objective loss:
-loss50_sqrtxIncome <- aov(loss50_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+loss50_sqrtxIncome <- aov(loss50_sqrt ~ factor(demo2_income.x), data = harveymomcbcl)
 summary(loss50_sqrtxIncome) #damn. p=.000436*** df= 3 F= 7.616
-#bonferonni:
-pairwise.t.test(harveymomcleaned$loss50_sqrt, harveymomcleaned$demo2_income.x, p.adjust.method="bonferroni")
-#almost all groups survived: 1 and 4: p=.00047***
-#boxplot: 
-loss50_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_income.x, y = loss50_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Objective Loss") 
-loss50_sqrtxIncome_Box
-#variances not the same: 
-kruskal.test(loss50_sqrt ~ demo2_income.x, data = harveymomcleaned) #p=.00243**, chisq = 14.381, df=3
-#
-pairwise.wilcox.test(harveymomcleaned$loss50_sqrt, harveymomcleaned$demo2_income.x,
-                     p.adjust.method = "BH") #getting error message 
 
+#bonferonni:
 
 #let's look at income and scope: 
-scope50_sqrtxIncome <- aov(scope50_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+scope50_sqrtxIncome <- aov(scope50_sqrt ~ factor(demo2_income.x), data = harveymomcbcl)
 summary(scope50_sqrtxIncome) #null. #p=.0535 df=3 F= 2.798
-#boxplot: 
-scope50_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_income.x, y = scope50_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Objective Scope") 
-scope50_sqrtxIncome_Box
-#variances not same: 
-kruskal.test(scope50_sqrt ~ demo2_income.x, data = harveymomcleaned) #p=.0953 null df=3 chisq= 6.3613
-#
-pairwise.wilcox.test(harveymomcleaned$scope50_sqrt, harveymomcleaned$demo2_income.x,
-                     p.adjust.method = "BH")
+
 #let's look at income and change:
-Change50_sqrtxIncome <- aov(Change50_sqrt ~ factor(demo2_income.x), data = harveymomcleaned)
+Change50_sqrtxIncome <- aov(Change50_sqrt ~ factor(demo2_income.x), data = harveymomcbcl)
 summary(Change50_sqrtxIncome) #null. p=.14 F=1.94
-#boxplot: 
-Change50_sqrtxIncome_Box <- harveymomcleaned %>% filter(is.na(demo2_income.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_income.x, y = Change50_sqrt)) + geom_boxplot() + xlab("Income Group") + ylab("Objective Change") 
-Change50_sqrtxIncome_Box
-#variances are similar!
-
-#maternal education and total PDI score: 
-#boxplot: 
-demo2_education.x_PDI_TOT <- harveymomcleaned %>% filter(is.na(demo2_education.x) == FALSE) %>% 
-  ggplot(aes(group= demo2_education.x, y = PDI_TOT)) + geom_boxplot() + xlab("Maternal education") + ylab("total pdi score") 
-demo2_education.x_PDI_TOT
-#groups are too small
-
-
-#sex of child and total externalizing score:
-#boxplot:
-c_sex_CBINT_sqrt <- harveymomcleaned %>% filter(is.na(c_sex) == FALSE) %>% 
-  ggplot(aes(group= c_sex, y = CBINT_sqrt)) + geom_boxplot() + xlab("Child Sex") + ylab("Child Internalizing Score") 
-c_sex_CBINT_sqrt
-
-#pregnant stage during harvey and IESR_t score: 
-#boxplot: 
-Trimester_280_IESR_T_R_sqrt <- harveymomcleaned %>% filter(is.na(Trimester_280) == FALSE) %>% 
-  ggplot(aes(group= Trimester_280, y = IESR_T_R_sqrt)) + geom_boxplot() + xlab("Pregnancy Trimester") + ylab("Maternal Flood Stress Score") 
-  Trimester_280_IESR_T_R_sqrt
-#unequal variances: 
-kruskal.test(IESR_T_R_sqrt ~ Trimester_280, data = harveymomcleaned) #not sig p=.4208, damn! 
-
-#pregnant stage during harvey and total PDI score:
-Trimester_280_PDI_TOT <- harveymomcleaned %>% filter(is.na(PDI_TOT) == FALSE) %>% 
-  ggplot(aes(group= Trimester_280, y = PDI_TOT)) + geom_boxplot() + xlab("Pregnancy Trimester") + ylab("Total PDI Score") 
-Trimester_280_PDI_TOT 
-#unequal: 
-kruskal.test(PDI_TOT ~ Trimester_280, data = harveymomcleaned) #null p=.6539
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
