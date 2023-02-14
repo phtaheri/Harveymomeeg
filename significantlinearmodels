@@ -1,0 +1,270 @@
+library("dplyr")
+library("lattice")
+library("survival")
+library("Formula")
+library("ggplot2")
+library("PerformanceAnalytics")
+library("rcompanion")
+library("compareGroups")
+library("sjmisc")
+library("xtable")
+library("corrplot")
+library("psych")
+library("apaTables")
+library("multcomp")
+library("sjPlot")
+setwd("/Users/parsanajmaie/Desktop/Data for Parsa")
+
+harveymomeeg_cleaned <- read.csv('harveymomeeg_reg_sig.csv')
+as.data.frame(harveymomeeg_cleaned)
+
+#first define columns:
+
+
+c_age_neg <- harveymomeeg_cleaned[4]
+bo_gest_age <- harveymomeeg_cleaned[5]
+bo_gest_age_win <- harveymomeeg_cleaned[6]
+bo_weight_lbs <- harveymomeeg_cleaned[7]
+c_sex <- harveymomeeg_cleaned[8]
+c_race <- harveymomeeg_cleaned[9]
+c_ethnicity <- harveymomeeg_cleaned[10]
+MomAgeAtRec <- harveymomeeg_cleaned[11]
+demo2_income.x <- harveymomeeg_cleaned[12]
+demo2_education.x <- harveymomeeg_cleaned[13]
+demo2_employed.x <- harveymomeeg_cleaned[14]
+demo2_relation.x <- harveymomeeg_cleaned[15]
+Trimester_280 <- harveymomeeg_cleaned[16]
+PregnantAtRecruitment <- harveymomeeg_cleaned[17]
+PregnantDuringHarvey_280 <- harveymomeeg_cleaned[18]
+PDI_TOT <- harveymomeeg_cleaned[19]
+IESR_T_R_sqrt <- harveymomeeg_cleaned[20]
+IDASGD_R_sqrt <- harveymomeeg_cleaned[21]
+IDASPa_R_log <- harveymomeeg_cleaned[22]
+HOSS200_log <- harveymomeeg_cleaned[23]
+threat50_wsqrt <- harveymomeeg_cleaned[24]
+loss50_sqrt <- harveymomeeg_cleaned[25]
+scope50_sqrt <- harveymomeeg_cleaned[26]
+Change50_sqrt<- harveymomeeg_cleaned[27]
+CBEMR_wsqrt <- harveymomeeg_cleaned[28]
+CBAND_sqrt <- harveymomeeg_cleaned[29]
+CBSOM_sqrt <- harveymomeeg_cleaned[30]
+CBSOM_wsqrt <- harveymomeeg_cleaned[31]
+CBWIT_wsqrt <- harveymomeeg_cleaned[32]
+CBLSP_sqrt <- harveymomeeg_cleaned[33]
+CBATT_sqrt <- harveymomeeg_cleaned[34]
+CBAGG_sqrt <- harveymomeeg_cleaned[35]
+CBOTH_log <- harveymomeeg_cleaned[36]
+CBINT_sqrt <- harveymomeeg_cleaned[37]
+CBEXT_sqrt <- harveymomeeg_cleaned[38]
+CBTOT_log <- harveymomeeg_cleaned[39]
+CBAFFt <- harveymomeeg_cleaned[40]
+CBANXt <- harveymomeeg_cleaned[41]
+CBPDDt <- harveymomeeg_cleaned[42]
+CBADDt <- harveymomeeg_cleaned[43]
+CBODDt <- harveymomeeg_cleaned[44]
+CBAGGt <- harveymomeeg_cleaned[45]
+CBINTt <- harveymomeeg_cleaned[46]
+CBEXTt <- harveymomeeg_cleaned[47]
+CBTOTt <- harveymomeeg_cleaned[48]
+E2_Theta_Rel_wsqrt <- harveymomeeg_cleaned[49]
+E24_Theta_Rel <-  harveymomeeg_cleaned[50]
+E2_LowAlpha_Rel_wsqrt <- harveymomeeg_cleaned[51]
+E24_LowAlpha_Rel <- harveymomeeg_cleaned[52]
+E2_HighAlpha_Rel_win <- harveymomeeg_cleaned[53]
+E24_HighAlpha_Rel_win <- harveymomeeg_cleaned[54]
+E2_Theta_Abs_nlog <- harveymomeeg_cleaned[55]
+E24_Theta_Abs <- harveymomeeg_cleaned[56]
+E2_LowAlpha_Abs <- harveymomeeg_cleaned[57]
+E24_LowAlpha_Abs_win <- harveymomeeg_cleaned[58]
+E2_HighAlpha_Abs <- harveymomeeg_cleaned[59]
+E24_HighAlpha_Abs_win <- harveymomeeg_cleaned[60]
+Num_Segs_winv <-  harveymomeeg_cleaned[61]
+
+#let's make a dataframe with only  variables that we would correlate for everything: 
+harveymomeegcleaned_corr_tot <- harveymomeeg_cleaned[, c("demo2_income.x", "c_age_neg", "Trimester_280", "Num_Segs_winv", "PDI_TOT", "IESR_T_R_sqrt", "IDASGD_R_sqrt", "IDASPa_R_log", "HOSS200_log", 
+                                                     "E2_Theta_Rel_wsqrt", "E24_Theta_Rel", "E2_LowAlpha_Rel_wsqrt", "E24_LowAlpha_Rel", "E2_HighAlpha_Rel_win", "E24_HighAlpha_Rel_win", "E2_Theta_Abs_nlog", "E24_Theta_Abs", "E2_LowAlpha_Abs", "E24_LowAlpha_Abs_win", "E2_HighAlpha_Abs", "E24_HighAlpha_Abs_win")] 
+#let's look at the corr plot:
+
+#dataframe with only values for PDI:                                                                                      
+harveymomeegcleaned_corr_PDI <- harveymomeeg_cleaned[, c("demo2_income.x", "c_age_neg", "Trimester_280","Num_Segs_winv", "PDI_TOT",  "E2_Theta_Rel_wsqrt", "E24_Theta_Rel", "E2_LowAlpha_Rel_wsqrt", "E24_LowAlpha_Rel", "E2_HighAlpha_Rel_win", "E24_HighAlpha_Rel_win", "E2_Theta_Abs_nlog", "E24_Theta_Abs", "E2_LowAlpha_Abs", "E24_LowAlpha_Abs_win", "E2_HighAlpha_Abs", "E24_HighAlpha_Abs_win")]
+
+#now let's look at corrplot: 
+harveymomeegcleaned_corr_PDI_plot <- chart.Correlation(harveymomeegcleaned_corr_PDI, histogram = TRUE, method = "spearman")
+
+
+#let's look at APA corr table for PDI:
+
+apa.cor.table(
+  harveymomeegcleaned_corr_PDI,
+  filename = "harveymomcleaned_corr_PDI.doc",
+  table.number = NA,
+  show.conf.interval = TRUE,
+  show.sig.stars = TRUE,
+  landscape = TRUE
+)
+
+#dataframe with only values for IESR:
+harveymomeegcleaned_corr_IESR <- harveymomeeg_cleaned[, c("demo2_income.x", "c_age_neg", "Trimester_280","Num_Segs_winv", "IESR_T_R_sqrt",  "E2_Theta_Rel_wsqrt", "E24_Theta_Rel", "E2_LowAlpha_Rel_wsqrt", "E24_LowAlpha_Rel", "E2_HighAlpha_Rel_win", "E24_HighAlpha_Rel_win", "E2_Theta_Abs_nlog", "E24_Theta_Abs", "E2_LowAlpha_Abs", "E24_LowAlpha_Abs_win", "E2_HighAlpha_Abs", "E24_HighAlpha_Abs_win")]
+
+
+#APA corr table for IESR: 
+apa.cor.table(
+  harveymomeegcleaned_corr_IESR,
+  filename = "harveymomcleaned_corr_IESR.doc",
+  table.number = NA,
+  show.conf.interval = TRUE,
+  show.sig.stars = TRUE,
+  landscape = TRUE
+)
+
+#dataframe with only values for IDASGD: 
+harveymomeegcleaned_corr_IDASGD <- harveymomeeg_cleaned[, c("demo2_income.x", "c_age_neg", "Trimester_280","Num_Segs_winv", "IDASGD_R_sqrt",  "E2_Theta_Rel_wsqrt", "E24_Theta_Rel","E2_LowAlpha_Rel_wsqrt", "E24_LowAlpha_Rel", "E2_HighAlpha_Rel_win", "E24_HighAlpha_Rel_win", "E2_Theta_Abs_nlog", "E24_Theta_Abs", "E2_LowAlpha_Abs", "E24_LowAlpha_Abs_win", "E2_HighAlpha_Abs", "E24_HighAlpha_Abs_win")]
+
+#APA corr table for IDASGD: 
+apa.cor.table(
+  harveymomeegcleaned_corr_IDASGD,
+  filename = "harveymomcleaned_corr_IDASGD.doc",
+  table.number = NA,
+  show.conf.interval = TRUE,
+  show.sig.stars = TRUE,
+  landscape = TRUE
+)
+
+#dataframe with only IDASPaR: 
+harveymomeegcleaned_corr_IDASPaR <- harveymomeeg_cleaned[, c("demo2_income.x", "c_age_neg", "Trimester_280","Num_Segs_winv", "IDASPa_R_log",  "E2_Theta_Rel_wsqrt", "E24_Theta_Rel","E2_LowAlpha_Rel_wsqrt", "E24_LowAlpha_Rel", "E2_HighAlpha_Rel_win", "E24_HighAlpha_Rel_win", "E2_Theta_Abs_nlog", "E24_Theta_Abs", "E2_LowAlpha_Abs", "E24_LowAlpha_Abs_win", "E2_HighAlpha_Abs", "E24_HighAlpha_Abs_win")]
+
+#APA corr table for IDASPaR: 
+apa.cor.table(
+  harveymomeegcleaned_corr_IDASPaR,
+  filename = "harveymomcleaned_corr_IDASPaR.doc",
+  table.number = NA,
+  show.conf.interval = TRUE,
+  show.sig.stars = TRUE,
+  landscape = TRUE
+)
+
+#dataframe with only HOSS200: 
+harveymomeegcleaned_corr_HOSS <- harveymomeeg_cleaned[, c("demo2_income.x", "c_age_neg", "Trimester_280","Num_Segs_winv", "HOSS200_log",  "E2_Theta_Rel_wsqrt", "E24_Theta_Rel","E2_LowAlpha_Rel_wsqrt", "E24_LowAlpha_Rel", "E2_HighAlpha_Rel_win", "E24_HighAlpha_Rel_win", "E2_Theta_Abs_nlog", "E24_Theta_Abs", "E2_LowAlpha_Abs", "E24_LowAlpha_Abs_win", "E2_HighAlpha_Abs", "E24_HighAlpha_Abs_win")]
+
+#APA corr table with only HOSS200:
+apa.cor.table(
+  harveymomeegcleaned_corr_HOSS,
+  filename = "harveymomcleaned_corr_HOSS.doc",
+  table.number = NA,
+  show.conf.interval = TRUE,
+  show.sig.stars = TRUE,
+  landscape = TRUE
+)
+
+
+#####THE FOLLOWING ARE ALL FOR RELATIVE:#################
+
+#########***E2 LowAlpha and IESR_T_R_sqrt***################
+
+#now relative E2 LowAlpha and IESR_T_R_sqrt:
+lm_E24relLowAlpha_IESR <- lm(E24_LowAlpha_Rel ~ IESR_T_R_sqrt, data = harveymomeeg_cleaned)
+summary(lm_E24relLowAlpha_IESR) #significant*****
+
+#now let's look at E2LowAlpha, IESR_T_R_sqrt with our covariates: 
+lm_E2RelLowAlpha_IESR_totcov <- lm(E24_LowAlpha_Rel ~ IESR_T_R_sqrt + c_age_neg + demo2_income.x + Trimester_280 + Num_Segs_winv, harveymomeeg_cleaned)
+summary(lm_E2RelLowAlpha_IESR_totcov) 
+#none are significant. let's see just age: 
+lm_E2RelLowAlpha_IESR_age <- lm(E24_LowAlpha_Rel ~ IESR_T_R_sqrt + c_age_neg, harveymomeeg_cleaned)
+summary(lm_E2RelLowAlpha_IESR_age) #########interesting. age is very significant****########## #look at beta for direction#
+#let's see just income: 
+lm_E2RelLowAlpha_IESR_inc <- lm(E24_LowAlpha_Rel ~ IESR_T_R_sqrt + demo2_income.x, harveymomeeg_cleaned)
+summary(lm_E2RelLowAlpha_IESR_inc) #null
+#let's see just trimester: 
+lm_E2RelLowAlpha_IESR_tri <- lm(E24_LowAlpha_Rel ~ IESR_T_R_sqrt + Trimester_280, harveymomeeg_cleaned)
+summary(lm_E2RelLowAlpha_IESR_tri) #null
+
+#########***E24 LowAlpha and HOSS200***################
+
+#now let's look at E24 LowAlpha and HOSS200:
+lm_E24relLowAlpha_HOSS <- lm(E24_LowAlpha_Rel ~ HOSS200_log, data = harveymomeeg_cleaned)
+summary(lm_E24relLowAlpha_HOSS) #NULL, BUT TREND.
+
+#let's see with all cov:
+lm_E24relLowAlpha_HOSS_totcov <- lm(E24_LowAlpha_Rel ~ HOSS200_log + c_age_neg + demo2_income.x + Trimester_280 + Num_Segs_winv, data = harveymomeeg_cleaned)
+summary(lm_E24relLowAlpha_HOSS_totcov) #null lol 
+
+#let's see what happens when we add age: 
+lm_E24relLowAlpha_HOSS_age <- lm(E24_LowAlpha_Rel ~ HOSS200_log + c_age_neg, data = harveymomeeg_cleaned)
+summary(lm_E24relLowAlpha_HOSS_age) ###okay, hella sig#######
+#let's see what happens when we add income: 
+lm_E24relLowAlpha_HOSS_inc <- lm(E24_LowAlpha_Rel ~ HOSS200_log + demo2_income.x, data = harveymomeeg_cleaned)
+summary(lm_E24relLowAlpha_HOSS_inc) #null
+#let's see just trimester: 
+lm_E24relLowAlpha_HOSS_tri<- lm(E24_LowAlpha_Rel ~ HOSS200_log + Trimester_280, data = harveymomeeg_cleaned)
+summary(lm_E24relLowAlpha_HOSS_tri) #null
+
+#########***E2 HighAlpha and PDI_TOT***################
+
+#let's look at relative E2 HighAlpha and PDI_TOT:
+lm_E2relHighAlpha_pdi <- lm(E2_HighAlpha_Rel_win ~ PDI_TOT, data = harveymomeeg_cleaned)
+summary(lm_E2relHighAlpha_pdi) #significant. interesting.
+
+#now let's look at all cov: 
+lm_E2relHighAlpha_pdi_totcov <- lm(E2_HighAlpha_Rel_win ~ PDI_TOT + c_age_neg + demo2_income.x + Trimester_280 + Num_Segs_winv, data = harveymomeeg_cleaned)
+summary(lm_E2relHighAlpha_pdi_totcov) #all null
+#let's look at just age: 
+lm_E2relHighAlpha_pdi_age <- lm(E2_HighAlpha_Rel_win ~ PDI_TOT + c_age_neg, data = harveymomeeg_cleaned)
+summary(lm_E2relHighAlpha_pdi_age) ###****significant. interesting##### ####YAY!!!!########
+#let's look at just trimester:
+lm_E2relHighAlpha_pdi_tri <- lm(E2_HighAlpha_Rel_win ~ PDI_TOT + Trimester_280, data = harveymomeeg_cleaned)
+summary(lm_E2relHighAlpha_pdi_tri) #####****significant. interesting#####
+#let's look at just income: 
+lm_E2relHighAlpha_pdi_inc <- lm(E2_HighAlpha_Rel_win ~ PDI_TOT + demo2_income.x, data = harveymomeeg_cleaned)
+summary(lm_E2relHighAlpha_pdi_inc) ###not sig. 
+
+##################now let's look at relative E24 HighAlpha and PDI_TOT######################
+
+#PDITOT:, first no covariates: 
+lm_E24relHighAlpha_pdi <- lm(E24_HighAlpha_Rel_win ~ PDI_TOT, data = harveymomeeg_cleaned)
+summary(lm_E24relHighAlpha_pdi) #SIG
+#then all cov:
+lm_E24relHighAlpha_pdi_totcov <- lm(E24_HighAlpha_Rel_win ~ PDI_TOT + c_age_neg + demo2_income.x + Trimester_280 + Num_Segs_winv, data = harveymomeeg_cleaned)
+summary(lm_E24relHighAlpha_pdi_totcov) #null 
+#next just age: 
+lm_E24relHighAlpha_pdi_age<- lm(E24_HighAlpha_Rel_win ~ PDI_TOT + c_age_neg, data = harveymomeeg_cleaned)
+summary(lm_E24relHighAlpha_pdi_age) ####sig, interesting#####
+#next just income: 
+lm_E24relHighAlpha_pdi_inc<- lm(E24_HighAlpha_Rel_win ~ PDI_TOT + demo2_income.x, data = harveymomeeg_cleaned)
+summary(lm_E24relHighAlpha_pdi_inc) #null
+#next just trimester: 
+lm_E24relHighAlpha_pdi_tri<- lm(E24_HighAlpha_Rel_win ~ PDI_TOT + Trimester_280, data = harveymomeeg_cleaned)
+summary(lm_E24relHighAlpha_pdi_tri) #####***sig, interesting######
+
+
+
+#######THE FOLLOWING ARE FOR ABSOLUTE##########
+
+##########now let's look at Absolute E2 HighAlpha and IDASGD_R_sqrt#############
+lm_E2AbsHighAlpha_IDASGD <- lm(E2_HighAlpha_Abs ~ IDASGD_R_sqrt, data = harveymomeeg_cleaned)
+summary(lm_E2AbsHighAlpha_IDASGD) #NULL,but trend 
+#what if we add age?
+lm_E2AbsHighAlpha_IDASGD_age <- lm(E2_HighAlpha_Abs ~ IDASGD_R_sqrt + c_age_neg, data = harveymomeeg_cleaned)
+summary(lm_E2AbsHighAlpha_IDASGD_age) #null
+#what if we add trimester?
+lm_E2AbsHighAlpha_IDASGD_tri <- lm(E2_HighAlpha_Abs ~ IDASGD_R_sqrt + Trimester_280, data = harveymomeeg_cleaned)
+summary(lm_E2AbsHighAlpha_IDASGD_tri) #still not sig womp womp 
+
+
+
+##################now Abs E2 HighAlpha and IDASPa_R_log:#############3
+lm_E2AbsHighAlpha_IDASPaR <- lm(E2_HighAlpha_Abs ~ IDASPa_R_log, data = harveymomeeg_cleaned)
+summary(lm_E2AbsHighAlpha_IDASPaR) #null, BUT TREND
+#what if we add age?
+lm_E2AbsHighAlpha_IDASPaR_age <- lm(E2_HighAlpha_Abs ~ IDASPa_R_log + c_age_neg, data = harveymomeeg_cleaned)
+summary(lm_E2AbsHighAlpha_IDASPaR_age) #null
+#what if we add trimester?
+lm_E2AbsHighAlpha_IDASPaR_age <- lm(E2_HighAlpha_Abs ~ IDASPa_R_log + Trimester_280, data = harveymomeeg_cleaned)
+summary(lm_E2AbsHighAlpha_IDASPaR_age) #still null. 
+
+
+
+
+
+
+
+
