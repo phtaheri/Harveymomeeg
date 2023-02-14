@@ -330,7 +330,7 @@ summary(lm_E2AbsHighAlpha_HOSS) #null
 
 #HOSS200 and cov:
 lm_E2AbsHighAlpha_HOSS_totcov <- lm(E2_HighAlpha_Abs ~ HOSS200_log + c_age + demo2_income.x + Trimester_280 + Num_Segs, harveymomeeg_cleaned)
-summary(lm_E2AbsHighAlpha_HOSS_totcov) #null as fuck
+summary(lm_E2AbsHighAlpha_HOSS_totcov) #null
 
 
 
