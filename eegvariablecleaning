@@ -1,0 +1,136 @@
+library(reshape2)
+library(dplyr)
+library(tidyverse)
+library(reshape2)
+library(ggplot2)
+library(psych)
+library(moments)
+library(DescTools)
+
+
+setwd("/Users/parsanajmaie/Desktop/Data for Parsa")
+
+harveymomeeg <- read.csv('harveymomeeg2.9.23.csv')
+
+#Now that we have the eeg data, we need to see if they follow a normal distribution
+
+#starting with relative power: 
+
+#e2 theta rel
+describe(harveymomeeg$E2_Theta_Rel) #high pos skew and kurtosis. so let's tranform
+hist(harveymomeeg$E2_Theta_Rel)
+#lets winsorize: 
+harveymomeeg$E2_Theta_Rel_win <- Winsorize(harveymomeeg$E2_Theta_Rel, na.rm = TRUE)
+describe(harveymomeeg$E2_Theta_Rel_win, na.rm = TRUE) #looks like there's still skew so let's adjust for pos skew
+harveymomeeg$E2_Theta_Rel_wsqrt <- sqrt(abs(harveymomeeg$E2_Theta_Rel_win)) #there are negative values so u have to take abs!
+describe(harveymomeeg$E2_Theta_Rel_wsqrt, na.rm = TRUE)
+hist(harveymomeeg$E2_Theta_Rel_wsqrt) #looks good :) 
+
+#e24 theta rel: 
+describe(harveymomeeg$E24_Theta_Rel) #damn looks good don't need to transform 
+hist(harveymomeeg$E24_Theta_Rel)
+
+
+#e2 low alpha: 
+describe(harveymomeeg$E2_LowAlpha_Rel) #high kurt and skew, let's transform: 
+#winsorize: 
+harveymomeeg$E2_LowAlpha_Rel_win <- Winsorize(harveymomeeg$E2_LowAlpha_Rel, na.rm = TRUE)
+describe(harveymomeeg$E2_LowAlpha_Rel_win, na.rm = TRUE) #still some pos skew
+harveymomeeg$E2_LowAlpha_Rel_wsqrt <- sqrt(abs(harveymomeeg$E2_LowAlpha_Rel_win))
+describe(harveymomeeg$E2_LowAlpha_Rel_wsqrt, na.rm = TRUE) #looks good!!
+hist(harveymomeeg$E2_LowAlpha_Rel_wsqrt) #looks good :) 
+
+
+#e24 low alpha: 
+describe(harveymomeeg$E24_LowAlpha_Rel) #looks normal! WOOHOO! 
+
+
+#e2 high alpha: 
+describe(harveymomeeg$E2_HighAlpha_Rel) #kurtosis be crazy. 
+#let's winsorize:
+harveymomeeg$E2_HighAlpha_Rel_win <- Winsorize(harveymomeeg$E2_HighAlpha_Rel, na.rm = TRUE)
+describe(harveymomeeg$E2_HighAlpha_Rel_win, na.rm = TRUE) #looks good
+hist(harveymomeeg$E2_HighAlpha_Rel_win)
+
+
+#e24 high alpha: 
+describe(harveymomeeg$E24_HighAlpha_Rel) #kurtosis high 
+#let's winsorize:
+harveymomeeg$E24_HighAlpha_Rel_win <- Winsorize(harveymomeeg$E24_HighAlpha_Rel, na.rm = TRUE)
+describe(harveymomeeg$E24_HighAlpha_Rel_win, na.rm = TRUE) #looks good 
+hist(harveymomeeg$E24_HighAlpha_Rel_win)
+
+
+#then for absolute power: 
+
+#e2 theta abs: 
+describe(harveymomeeg$E2_Theta_Abs) #high pos skew . so let's tranform
+hist(harveymomeeg$E2_Theta_Abs) #negative skew!, we have to add a constant to make all positive. what can work is .29 bc it makes the min=1
+harveymomeeg$E2_Theta_Abs_nlog <- log10(abs(.29 - (harveymomeeg$E2_Theta_Abs)))
+describe(harveymomeeg$E2_Theta_Abs_nlog)
+hist(harveymomeeg$E2_Theta_Abs_nlog) #looks good
+
+#e24 theta abs: 
+describe(harveymomeeg$E24_Theta_Abs)
+hist(harveymomeeg$E24_Theta_Abs) #looks good! 
+
+#e2 low alpha: 
+describe(harveymomeeg$E2_LowAlpha_Abs)
+hist(harveymomeeg$E2_LowAlpha_Abs) #looks good! 
+
+#e24 low alpha: 
+describe(harveymomeeg$E24_LowAlpha_Abs) #looks good!
+hist(harveymomeeg$E24_LowAlpha_Abs) #kurtosis- let's winsorize:
+harveymomeeg$E24_LowAlpha_Abs_win <- Winsorize(harveymomeeg$E24_LowAlpha_Abs, na.rm = TRUE)
+describe(harveymomeeg$E24_LowAlpha_Abs_win)
+hist(harveymomeeg$E24_LowAlpha_Abs_win) #looks good 
+
+#e2 high alpha: 
+describe(harveymomeeg$E2_HighAlpha_Abs)
+hist(harveymomeeg$E2_HighAlpha_Abs) #damn looks sexy 
+
+#e24 high alpha: 
+describe(harveymomeeg$E24_HighAlpha_Abs)
+hist(harveymomeeg$E24_HighAlpha_Abs) #some kurtosis: 
+harveymomeeg$E24_HighAlpha_Abs_win <- Winsorize(harveymomeeg$E24_HighAlpha_Abs, na.rm = TRUE)
+describe(harveymomeeg$E24_HighAlpha_Abs_win)
+hist(harveymomeeg$E24_HighAlpha_Abs_win) #looks better! 
+
+
+
+#Num_Segs: 
+describe(harveymomeeg$Num_Segs) #heavy kurtosis and skew, let's winsorize:
+harveymomeeg$Num_Segs_win <- Winsorize(harveymomeeg$Num_Segs, na.rm = TRUE)
+hist(harveymomeeg$Num_Segs_win) #still some positive skew, let's transform: 
+harveymomeeg$Num_Segs_winv <- 1/(harveymomeeg$Num_Segs_win)
+describe(harveymomeeg$Num_Segs_winv)
+hist(harveymomeeg$Num_Segs_winv)
+
+#next i'm going to clean some of my covariates: 
+
+
+#let's start with re-coding income into lower income and higher income: 
+harveymomeeg <- harveymomeeg %>%
+  mutate(demo2_income.x = case_when(
+    demo2_income.x == "2" ~ 1,
+    demo2_income.x == "3" ~ 2,
+    demo2_income.x == "4" ~ 2,
+  ))
+
+
+#next I want to recode Trimester into 2 categories: first and second trimester and third
+harveymomeeg <- harveymomeeg %>%
+  mutate(Trimester_280 = case_when(
+    Trimester_280 == "2" ~ 1,
+    Trimester_280 == "3" ~ 2,
+  ))
+
+
+
+
+#write csv: 
+write.csv(harveymomeeg, "harveymomeeg_cleaned.csv")
+
+
+
+
